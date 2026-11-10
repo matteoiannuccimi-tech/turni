@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Orari">
+<meta name="theme-color" content="#0a1f44">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a1f44'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%234a9eff' stroke-width='5'/%3E%3Cpath d='M32 21v12l9 5' stroke='%23fff' stroke-width='5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<title>Turni e Straordinari</title>
+<link rel="apple-touch-icon" href="icona.png">
+<link rel="icon" type="image/png" href="icona.png">
+<style>
+  :root{
+    --blu:#0a1f44; --blu2:#1554b0; --blu3:#4a9eff;
+    --arancio:#e07a1f; --arancio-bg:#fdf0e2;
+    --bg:#f3f5f9; --card:#ffffff; --ink:#10192b; --ink2:#5d6b85;
+    --line:#e3e8f0; --ok:#1e8e5a; --ok-bg:#e6f5ee; --red:#c0392b;
+    --sh:0 1px 2px rgba(16,25,43,.06), 0 6px 18px rgba(16,25,43,.06);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--ink);
+    font-size:16px; line-height:1.4; overscroll-behavior-y:none;
+  }
+  .app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+
+  header{
+    position:sticky;top:0;z-index:20;background:var(--blu);color:#fff;
+    padding:calc(var(--safe-t) + 14px) 20px 14px;
+  }
+  header .ttl{font-size:22px;font-weight:700;letter-spacing:-.3px}
+  header .sub{font-size:13px;opacity:.72;margin-top:2px;text-transform:capitalize}
+
+  main{flex:1;padding:16px 16px calc(96px + var(--safe-b));}
+  .view{display:none} .view.on{display:block}
+
+  .card{background:var(--card);border-radius:18px;padding:18px;box-shadow:var(--sh);margin-bottom:14px}
+  .lbl{font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--ink2)}
+
+  /* --- Oggi --- */
+  .big{font-size:44px;font-weight:750;letter-spacing:-1.5px;color:var(--blu2);line-height:1;margin:10px 0 4px}
+  .big span{font-size:20px;font-weight:600;letter-spacing:0}
+  .sched{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:15px;color:var(--ink2)}
+  .sched b{color:var(--ink);font-weight:600}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+  button{font-family:inherit;font-size:16px;font-weight:650;border:none;border-radius:14px;padding:15px 12px;cursor:pointer;transition:transform .06s,filter .15s}
+  button:active{transform:scale(.97)}
+  .b-prim{background:var(--blu2);color:#fff}
+  .b-prim[disabled]{background:#c8d2e3;color:#f2f5fa}
+  .b-out{background:#fff;color:var(--blu2);box-shadow:inset 0 0 0 2px var(--blu2)}
+  .b-out[disabled]{color:#c8d2e3;box-shadow:inset 0 0 0 2px #c8d2e3}
+  .b-wide{width:100%;margin-top:10px}
+  .b-gray{background:#eef1f7;color:var(--ink2);font-weight:600;font-size:14px;padding:11px}
+  .b-del{background:#fdeceb;color:var(--red);font-weight:600;font-size:14px;padding:11px}
+
+  .stato{display:flex;align-items:center;gap:9px;margin-top:6px;font-size:14px;font-weight:600}
+  .dot{width:9px;height:9px;border-radius:50%;background:#c8d2e3;flex:none}
+  .dot.live{background:var(--ok);box-shadow:0 0 0 4px var(--ok-bg)}
+  .pill{display:inline-flex;align-items:center;gap:7px;background:var(--arancio-bg);color:var(--arancio);
+        font-size:14px;font-weight:700;border-radius:11px;padding:9px 12px;margin-top:12px}
+  .pill .n{font-size:17px}
+  .pill.zero{background:#eef1f7;color:var(--ink2)}
+  .note{font-size:12.5px;color:var(--ink2);margin-top:10px;line-height:1.45}
+
+  /* --- Calendario --- */
+  .chead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .chead .m{font-size:17px;font-weight:700;text-transform:capitalize}
+  .nav{background:#eef1f7;border-radius:11px;width:40px;height:40px;font-size:18px;color:var(--blu2);
+       display:flex;align-items:center;justify-content:center;padding:0}
+  .grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .dow{text-align:center;font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;padding-bottom:6px}
+  .day{aspect-ratio:1;border-radius:11px;background:#f7f9fc;display:flex;flex-direction:column;
+       align-items:center;justify-content:center;gap:2px;font-size:14px;font-weight:600;position:relative;border:1.5px solid transparent}
+  .day.pad{background:transparent}
+  .day .n{line-height:1}
+  .day .h{font-size:9.5px;font-weight:700;opacity:.85}
+  .day.tipo-8{background:#dbe8fb;color:var(--blu2)}
+  .day.tipo-4{background:#eaf1fd;color:#4a7fd4}
+  .day.tipo-str{background:var(--arancio-bg);color:var(--arancio)}
+  .day.tipo-riposo{background:#f2f4f8;color:#9aa6bd}
+  .day.tipo-fera{background:#e9e4fa;color:#5b47b8}
+  .day.tipo-perm{background:#e2f3f6;color:#1a7f92}
+  .day.tipo-mal{background:#fde5e2;color:#b8392c}
+  .day.tipo-vis{background:#e8eef7;color:#456089}
+  .day.tipo-turno{background:#dcefff;color:#0d5a9c}
+  .day.tipo-notte{background:#2a2f52;color:#dfe6ff}
+  .day.tipo-guardia{background:#173a2c;color:#bfe6cf}
+  .day.tipo-smont{background:#f4efe2;color:#8a6a1f}
+  .day.tipo-reper{background:#efe3fb;color:#6b3fa0}
+  .ab button.on.turno{background:#0d5a9c}
+  .ab button.on.guardia{background:#173a2c}
+  .ab button.on.notte{background:#2a2f52}
+  .ab button.on.mal{background:#b8392c}
+  .ab button.on.vis{background:#456089}
+  .day.today{border-color:var(--blu2)}
+  .ab{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+  .ab button{flex:1;min-width:calc(50% - 4px);font-size:13.5px;font-weight:650;padding:11px 8px;border-radius:12px;
+             background:#eef1f7;color:var(--ink2)}
+  .ab button.on{background:var(--blu2);color:#fff}
+  .ab button.on.fera{background:#5b47b8}
+  .ab button.on.perm{background:#1a7f92}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;font-size:12.5px;color:var(--ink2)}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:4px;margin-right:6px;vertical-align:-1px}
+
+  /* --- Riepilogo --- */
+  .kpi{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:14px}
+  .kpi .k{background:var(--card);border-radius:15px;padding:13px 12px;box-shadow:var(--sh)}
+  .kpi .k .v{font-size:21px;font-weight:750;letter-spacing:-.6px;margin-top:5px}
+  .kpi .k .v small{font-size:12px;font-weight:600}
+  .kpi .k.str .v{color:var(--arancio)}
+  .bars{display:flex;align-items:flex-end;justify-content:space-around;height:150px;gap:8px;margin-top:6px}
+  .barw{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px}
+  .bar{width:100%;max-width:46px;border-radius:7px 7px 3px 3px;background:var(--blu3);display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;min-height:3px}
+  .bar .str{background:var(--arancio)}
+  .barw .cl{font-size:11px;color:var(--ink2);font-weight:600}
+  .barw .vv{font-size:10.5px;color:var(--ink2);font-weight:700}
+  .riga{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}
+  .riga:last-child{border-bottom:none}
+  .riga .v{font-weight:650}
+  .riga .v.str{color:var(--arancio)}
+  .selbar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:15px;padding:10px 12px;box-shadow:var(--sh);margin-bottom:14px}
+
+  /* --- Impostazioni --- */
+  .setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .setrow:last-child{border-bottom:none}
+  .setrow .nm{font-size:15px;font-weight:600}
+  .setrow .su{font-size:12.5px;color:var(--ink2);margin-top:2px}
+  .tog{width:50px;height:30px;border-radius:15px;background:#d3dae7;position:relative;flex:none;transition:background .18s;border:none;padding:0}
+  .tog.on{background:var(--ok)}
+  .tog::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;
+              transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .tog.on::after{transform:translateX(20px)}
+  .field{background:#f7f9fc;border:1.5px solid var(--line);border-radius:11px;padding:10px 12px;font-family:inherit;
+         font-size:16px;font-weight:600;color:var(--ink);width:96px;text-align:center}
+  .field:focus{outline:none;border-color:var(--blu3);background:#fff}
+  .field.num{width:78px}
+  .sub-h{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink2);margin:0 0 12px}
+  .orari{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+  .orari .ar{color:var(--ink2);font-size:14px}
+
+  /* --- Modale --- */
+  .ov{position:fixed;inset:0;background:rgba(10,25,50,.45);z-index:60;display:none;align-items:flex-end}
+  .ov.on{display:flex}
+  .sheet{background:#fff;width:100%;max-width:520px;margin:0 auto;border-radius:22px 22px 0 0;
+         padding:22px 20px calc(22px + var(--safe-b));max-height:88vh;overflow-y:auto}
+  .sheet h3{margin:0 0 4px;font-size:19px}
+  .sheet .when{font-size:13px;color:var(--ink2);margin-bottom:16px;text-transform:capitalize}
+  .fld{margin-bottom:14px}
+  .fld label{display:block;font-size:12.5px;font-weight:700;color:var(--ink2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+  .fld input[type=time]{width:100%;font-family:inherit;font-size:19px;font-weight:650;color:var(--ink);
+        background:#f7f9fc;border:1.5px solid var(--line);border-radius:13px;padding:13px 14px;-webkit-appearance:none}
+  .fld input[type=time]:focus{outline:none;border-color:var(--blu3);background:#fff}
+  .fld2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .chk{display:flex;align-items:center;gap:11px;padding:12px;background:#f7f9fc;border-radius:13px;font-size:14.5px;font-weight:600}
+  .chk input{width:22px;height:22px;flex:none;accent-color:var(--blu2)}
+  .chk small{display:block;font-weight:400;color:var(--ink2);font-size:12px}
+  .calc{font-size:13.5px;color:var(--ink2);background:#f7f9fc;border-radius:12px;padding:11px 13px;margin-bottom:14px}
+  .calc b{color:var(--blu2)}
+  .calc b.str{color:var(--arancio)}
+
+  /* --- Tabbar --- */
+  nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(255,255,255,.94);
+           backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);
+           border-top:1px solid var(--line);padding-bottom:var(--safe-b)}
+  nav.tabs .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+  nav.tabs button{background:none;border-radius:0;padding:9px 4px 7px;display:flex;flex-direction:column;
+        align-items:center;gap:3px;color:#9aa6bd;font-size:10.5px;font-weight:650}
+  nav.tabs button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  nav.tabs button.on{color:var(--blu2)}
+  .nlist{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .nrow{display:flex;gap:7px;align-items:center;background:#f7f9fc;border-radius:12px;padding:7px 8px}
+  .nrow input[type=time]{width:88px;flex:none;border:1.5px solid var(--line);border-radius:9px;padding:8px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink)}
+  .nrow input[type=text]{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:9px;padding:8px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink)}
+  .nrow .x{flex:none;width:32px;height:32px;border-radius:9px;background:#fdeceb;color:var(--red);font-size:17px;font-weight:700;padding:0;display:flex;align-items:center;justify-content:center}
+  .nrow input:focus{outline:none;border-color:var(--blu2)}
+  .b-add{background:#eef1f7;color:var(--blu2);font-weight:650;font-size:14px;padding:11px;width:100%;margin-top:8px;border-radius:12px}
+  .nota{display:flex;gap:8px;font-size:13.5px;color:var(--ink2);margin-top:6px}
+  .nota .hh{font-weight:700;color:var(--ink);flex:none;min-width:42px}
+
+  .gbox{display:flex;flex-direction:column;gap:10px}
+  .gbox .st{font-size:13.5px;font-weight:700;border-radius:12px;padding:10px 12px}
+  .gbox .st.ok{background:var(--ok-bg);color:var(--ok)}
+  .gbox .st.no{background:#eef1f7;color:var(--ink2)}
+  .gbox .st.err{background:#fdeceb;color:var(--red)}
+  .gbox input{font-family:inherit;font-size:14px;border:1.5px solid var(--line);border-radius:12px;padding:12px;width:100%;background:#fff;color:var(--ink)}
+  .gbox input:focus{outline:none;border-color:var(--blu2)}
+  .gbox .lbl2{font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+
+  .toast{position:fixed;left:50%;bottom:calc(92px + var(--safe-b));transform:translateX(-50%) translateY(14px);
+        background:var(--blu);color:#fff;font-size:14px;font-weight:600;padding:11px 18px;border-radius:13px;
+        opacity:0;pointer-events:none;transition:all .25s;z-index:80;max-width:88%;text-align:center}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .empty{text-align:center;color:var(--ink2);font-size:14px;padding:22px 8px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="ttl" id="hTtl">Oggi</div>
+    <div class="sub" id="hSub">—</div>
+  </header>
+
+  <main>
+    <!-- OGGI -->
+    <section class="view on" id="v-oggi">
+      <div class="card">
+        <div class="lbl">Ore lavorate oggi</div>
+        <div class="big" id="oOre">0,0<span> h</span></div>
+        <div class="stato" id="oStato"><span class="dot"></span><span>Fuori servizio</span></div>
+        <div class="sched" id="oSched"></div>
+        <div class="row2">
+          <button class="b-prim" id="bIn" style="flex:1">Inserisci orari di oggi</button>
+        </div>
+        <div class="pill zero" id="oStr"><span>Straordinario oggi</span><span class="n">0,0 h</span></div>
+      </div>
+      <div class="card" id="oNote">
+        <div class="note" id="oNoteTx"></div>
+      </div>
+    </section>
+
+    <!-- CALENDARIO -->
+    <section class="view" id="v-cal">
+      <div class="card">
+        <div class="chead">
+          <button class="nav" id="pPrev">‹</button>
+          <div class="m" id="cMese">—</div>
+          <button class="nav" id="pNext">›</button>
+        </div>
+        <div class="grid7" id="cDow"></div>
+        <div class="grid7" id="cGriglia" style="margin-top:5px"></div>
+        <div class="legend">
+          <span><i style="background:#dbe8fb"></i>Giorno pieno</span>
+          <span><i style="background:#eaf1fd"></i>Mezza giornata</span>
+          <span><i style="background:#fdf0e2"></i>Con straordinario</span>
+          <span><i style="background:#f2f4f8"></i>Libero</span>
+          <span><i style="background:#e9e4fa"></i>Ferie</span>
+          <span><i style="background:#e2f3f6"></i>Permesso</span>
+          <span><i style="background:#fde5e2"></i>Malattia</span>
+          <span><i style="background:#e8eef7"></i>Visita medica</span>
+          <span><i style="background:#2a2f52"></i>D1 (12 h)</span>
+          <span><i style="background:#dcefff"></i>N (12 h)</span>
+          <span><i style="background:#6b7a99"></i>Notte (dopo il D1)</span>
+          <span><i style="background:#efe3fb"></i>Reperibilità (dopo il D2)</span>
+        </div>
+        <div class="note">Tocca un giorno per registrare ore, assenze o visite mediche.</div>
+      </div>
+    </section>
+
+    <!-- RIEPILOGO -->
+    <section class="view" id="v-rip">
+      <div class="selbar">
+        <button class="nav" id="rPrev">‹</button>
+        <div class="m" id="rMese" style="font-weight:700;text-transform:capitalize"></div>
+        <button class="nav" id="rNext">›</button>
+      </div>
+      <div class="kpi">
+        <div class="k"><div class="lbl">Lavorate</div><div class="v" id="rOre">0<small> h</small></div></div>
+        <div class="k str"><div class="lbl">Straordin.</div><div class="v" id="rStr">0<small> h</small></div></div>
+        <div class="k"><div class="lbl">Sabati</div><div class="v" id="rSab">0</div></div>
+      </div>
+      <div class="kpi" style="grid-template-columns:1fr 1fr">
+        <div class="k"><div class="lbl">Ferie</div><div class="v" id="rFer">0<small> gg</small></div></div>
+        <div class="k"><div class="lbl">Permessi</div><div class="v" id="rPer">0<small> gg</small></div></div>
+      </div>
+      <div class="card">
+        <div class="lbl" style="margin-bottom:12px">Settimane del mese</div>
+        <div class="bars" id="rBars"></div>
+      </div>
+      <div class="card" id="rFerie"></div>
+      <div class="card" id="rDett"></div>
+      <button class="b-out b-wide" id="bIcs">Esporta calendario (.ics)</button>
+        <button class="b-out b-wide" id="bCsv">Esporta CSV del mese</button>
+    </section>
+
+    <!-- IMPOSTAZIONI -->
+    <section class="view" id="v-set">
+      <div class="card">
+        <div class="sub-h">Il mio orario contrattuale</div>
+        <div id="sGiorni"></div>
+      </div>
+      <div class="card">
+        <div class="sub-h">Turni speciali</div>
+        <div class="note" style="margin:0 0 12px">Dal calendario puoi segnare i turni operativi. Le ore del turno
+        si contano come lavoro; quelle oltre il limite del giorno sono straordinario.</div>
+        <div id="sTurni"></div>
+      </div>
+      <div class="card">
+        <div class="sub-h">Soglia straordinario</div>
+        <div class="setrow">
+          <div><div class="nm">Ore giornaliere</div><div class="su">Oltre queste ore scatta lo straordinario</div></div>
+          <input class="field num" type="number" step="0.5" min="0" max="16" id="sSoglia">
+        </div>
+        <div class="setrow">
+          <div><div class="nm">Carenza dall'ingresso</div><div class="su">Si conta oltre l'orario di ingresso previsto</div></div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink2)">0 min</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sub-h">Google Calendar</div>
+        <div class="note" style="margin:0 0 12px">Collega il tuo foglio Google: i turni vanno nel calendario
+        e quello che scrivi nel calendario torna qui. La chiave è la stessa che hai messo nello script.</div>
+        <div class="gbox">
+          <div id="gStato" class="st no">Non collegato</div>
+          <div class="lbl2">Indirizzo dello script</div>
+          <input type="text" id="gUrl" placeholder="https://script.google.com/macros/s/.../exec" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <div class="lbl2">Chiave</div>
+          <input type="text" id="gTok" placeholder="la chiave che hai messo nello script" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="b-prim b-wide" id="gSalva" style="margin-top:4px">Collega</button>
+          <button class="b-out b-wide" id="gInvia">Invia a Calendar</button>
+          <button class="b-out b-wide" id="gImporta">Importa da Calendar</button>
+        </div>
+        <div class="note" id="gEsito" style="margin-top:12px"></div>
+      </div>
+      <button class="b-out b-wide" id="bReset">Ripristina i valori iniziali</button>
+    </section>
+  </main>
+</div>
+
+<nav class="tabs">
+  <div class="in">
+    <button data-tab="oggi" class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3.2 2"/></svg>Oggi</button>
+    <button data-tab="cal"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>Calendario</button>
+    <button data-tab="rip"><svg viewBox="0 0 24 24"><path d="M4.5 19.5V11M10 19.5V5M15.5 19.5v-6M21 19.5V8"/></svg>Riepilogo</button>
+    <button data-tab="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2.4M12 18.1v2.4M4.9 7.9l2.1 1.2M17 14.9l2.1 1.2M4.9 16.1l2.1-1.2M17 9.1l2.1-1.2"/></svg>Impostazioni</button>
+  </div>
+</nav>
+
+<div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============ CONFIGURAZIONE E DATI ============ */
+const KEY_D="orari_dati_v1", KEY_S="orari_set_v1";
+
+const GIORNI=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
+/* fascia abituale: [mattinaIni, mattinaFine, pomeIni, pomeFine]  (null = non si lavora) */
+const FASCIA_STD={
+  0:["08:00","18:00",null,null],
+  1:["08:00","14:00",null,null],
+  2:["08:00","14:00",null,null],
+  3:["08:00","18:00",null,null],
+  4:["08:00","14:00",null,null],
+  5:[null,null,null,null],
+  6:[null,null,null,null]
+};
+const LIM_STD={0:9,1:6,2:6,3:9,4:6,5:0,6:0};
+const LIM_LUNGO={};
+
+/* turni speciali */
+const TURNI={
+  d1: {nome:"D1", corte:"D1", ore:12},
+  d2: {nome:"D2", corte:"D2", ore:12},
+  n:  {nome:"N",  corte:"N",  ore:12}
+};
+/* turni "semplici": 12 h e il riposo lo decidi tu */
+const TIPI_TURNO_SEMPLICI=["n"]; /* N: 12 h, il riposo lo decidi tu */
+/* fissi, calcolati dai turni */
+const TIPI_FISSI=["notte","libero","reperibilita"];
+
+let SET={
+  soglia:9,
+  orari:JSON.parse(JSON.stringify(FASCIA_STD))
+};
+let DATI={};   /* "YYYY-MM-DD" -> {g:true, m:[ini,fine,ini2,fine2]} */
+let STATO=null;
+let view="oggi";
+let GOOG={url:"",tok:""};   /* collegamento a Google Calendar */
+
+try{ const s=localStorage.getItem(KEY_S); if(s) SET=Object.assign(SET,JSON.parse(s)); }catch(e){}
+try{ const d=localStorage.getItem(KEY_D); if(d) DATI=JSON.parse(d); }catch(e){}
+try{ localStorage.removeItem("orari_stato_v1"); }catch(e){}
+try{ const g=localStorage.getItem("orari_goog_v1"); if(g) GOOG=JSON.parse(g); }catch(e){}
+
+const salvaD=()=>{ try{localStorage.setItem(KEY_D,JSON.stringify(DATI));}catch(e){} };
+const salvaS=()=>{ try{localStorage.setItem(KEY_S,JSON.stringify(SET));}catch(e){} };
+const salvaG=()=>{ try{localStorage.setItem("orari_goog_v1",JSON.stringify(GOOG));}catch(e){} };
+const salvaStato=()=>{ try{
+  if(STATO) localStorage.setItem("orari_stato_v1",JSON.stringify(STATO));
+  else localStorage.removeItem("orari_stato_v1");
+}catch(e){} };
+
+/* ============ UTILITÀ ============ */
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const daIso=s=>{const p=s.split("-").map(Number);return new Date(p[0],p[1]-1,p[2]);};
+const oggiIso=()=>iso(new Date());
+const min=t=>{ if(!t) return null; const p=t.split(":").map(Number); return p[0]*60+p[1]; };
+const oreTxt=o=>o<=0?"0,0":(Math.round(o*10)/10).toFixed(1).replace(".",",");
+const impDurata=m=>{ if(m==null||m<0) return "0:00"; const h=Math.floor(m/60),q=Math.round(m%60); return h+":"+pad(q); };
+const fmtOra=t=>t||"—";
+const impOra=m=>{ if(m==null) return "—"; const mm=((Math.round(m)%1440)+1440)%1440; return Math.floor(mm/60)+":"+pad(mm%60); };
+/* le note del giorno possono essere una riga vecchia (note) o un elenco (noteLista) */
+function noteDi(r){
+  if(!r) return [];
+  if(Array.isArray(r.noteLista)) return r.noteLista;
+  if(r.note) return [{ora:"",testo:r.note}];
+  return [];
+}
+const noteTxt=r=>noteDi(r).map(o=>((o.ora?o.ora+" ":"")+o.testo).trim()).join(" · ");
+const meseNome=a=>["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"][a.getMonth()];
+const giornoNome=a=>["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"][a.getDay()];
+const clsLun=a=>{const g=a.getDay();return g===0?6:g-1;}; /* 0=lun ... 5=sab, 6=domenica */
+
+function mostra(t){ const el=document.getElementById("toast"); el.textContent=t; el.classList.add("on");
+  clearTimeout(mostra._t); mostra._t=setTimeout(()=>el.classList.remove("on"),2100); }
+
+/* minuti lavorati (pausa esclusa) da una fascia a 4 valori + eventuali extra */
+function minFascia(f){
+  if(!f) return 0;
+  const s=[];
+  if(f[0]&&f[1]) s.push(Math.max(0,min(f[1])-min(f[0])));
+  if(f[2]&&f[3]) s.push(Math.max(0,min(f[3])-min(f[2])));
+  return s.reduce((a,b)=>a+b,0);
+}
+function fasciaDi(g){
+  const r=DATI[iso(g)];
+  if(r&&r.turno) return null;
+  const gi=clsLun(g);
+  const base=(SET.orari&&SET.orari[gi])?SET.orari[gi]:FASCIA_STD[gi];
+  return base.slice();
+}
+/* il sabato della settimana a cui appartiene g è lavorato (o pianificato)? */
+function recuperoAttivo(g){
+  const sab=sabatoSettimana(g);
+  return sabLavorato(sab);
+}
+function sabatoSettimana(g){
+  const gi=clsLun(g), s=new Date(g.getFullYear(),g.getMonth(),g.getDate());
+  s.setDate(s.getDate()+(5-gi)); return s;
+}
+function sabLavorato(sab){
+  const k=iso(sab);
+  const r=DATI[k];
+  if(r && r.g) return true;
+  const w=DATI["avviso_"+k];                            /* scelta esplicita senza ore */
+  if(w==="no") return false;
+  if(w==="si") return true;
+  const t=new Date(); t.setHours(0,0,0,0);
+  return sab < t;   /* passato senza ore = non lavorato ; futuro/oggi = previsione: lavorato */
+}
+/* fascia per timbrare l'ingresso: dalle 7:30 alle 8:30 (ingresso previsto + 1 ora) */
+function orariIngresso(g){
+  if(clsLun(g)>=5) return null;
+  const f=fasciaDi(g);
+  if(!f || !f[0]) return null;
+  return {prev:min(f[0]), max:min(f[0])+60};
+}
+const sogliaIngresso=g=>{const o=orariIngresso(g); return o?o.prev:null;};
+const chiudiIngresso=g=>{const o=orariIngresso(g); return o?o.max:null;};
+/* limite giornaliero oltre il quale scatta lo straordinario */
+function limiteGiorno(g){ return LIM_STD[clsLun(g)]; }
+/* i turni e i giorni che ne derivano non producono straordinario */
+const NON_STR=["d1","d2","n"];
+/* straordinario del giorno: tutte le ore oltre il limite del giorno */
+function straGiorno(g,minuti){ return Math.max(0,minuti/60-limiteGiorno(g)); }
+
+/* ============ STATISTICHE DEL GIORNO ============ */
+/* tipi di giornata: lavorata, oppure un'assenza retribuita/giustificata */
+const ETICHETTE={
+  lav:null,
+  feria:"Giorno di ferie",
+  notte:"Turno di notte",
+  libero:"Libero",
+  d1:"Turno D1",
+  d2:"Turno D2",
+  n:"Turno N",
+  reperibilita:"Reperibilità notturna",
+  permesso:"Giorno di permesso",
+  malattia:"Giorno di malattia",
+  visita:"Visita medica",
+  libero:"Libero"
+};
+const TIPI_ASSENZA=["feria","permesso","malattia","visita"];
+const TIPI_TURNO=["d1","d2","n"];
+const oreTurnoDi=r=>r&&r.turno?((r.oreTurno!=null)?r.oreTurno:(TURNI[r.turno]?TURNI[r.turno].ore:12)):0;
+/* giorno con turno D1 in un intorno di g */
+function d1Attorno(g,daA){
+  for(let i=-3;i<=3;i++){
+    const x=new Date(g.getFullYear(),g.getMonth(),g.getDate()+i), r=DATI[iso(x)];
+    if(r&&r.turno==="d1"){
+      const d=i-daA; if(d>=-0.01 && d<0.99) return true;
+    }
+  }
+  return false;
+}
+const isNotteD1=g=>d1Attorno(g,-1);
+/* i giorni 2 e 3 dopo il D1 sono entrambi "libero" */
+const isLiberoD1=g=>d1Attorno(g,-2)||d1Attorno(g,-3);
+/* giorno con turno D2 in un intorno di g */
+function d2Attorno(g,daA){
+  for(let i=-3;i<=3;i++){
+    const x=new Date(g.getFullYear(),g.getMonth(),g.getDate()+i), r=DATI[iso(x)];
+    if(r&&r.turno==="d2"){
+      const d=i-daA; if(d>=-0.01 && d<0.99) return true;
+    }
+  }
+  return false;
+}
+const isRepD2=g=>d2Attorno(g,-1);
+function tipoGiorno(k){
+  const r=DATI[k];
+  const g=daIso(k);
+  if(r && TIPI_ASSENZA.indexOf(r.t)>=0) return r.t;
+  if(r && r.t==="libero") return "libero";
+  if(r && r.turno) return "lav";
+  if(r && r.t) return null;
+  if(isNotteD1(g)) return "notte";
+  if(isLiberoD1(g)) return "libero";
+  if(isRepD2(g)) return "reperibilita";
+  if(!r) return null;
+  return (r.g&&r.m) ? "lav" : null;
+}
+function datiGiorno(g){
+  const k=iso(g), r=DATI[k];
+  const tipo=tipoGiorno(k);
+  let minuti=0, stra=0, orePian=0;
+  const gi=clsLun(g);
+  const tv=(r&&r.turno)||null;
+  const oriTurno=tv?((r.oreTurno!=null)?r.oreTurno:(TURNI[tv]?TURNI[tv].ore:12)):0;
+  const giornoTurno=!!tv || isNotteD1(g) || isRepD2(g);
+  if(giornoTurno){
+    /* turni D1, D2, N, reperibilità e i giorni che ne derivano: mai straordinario */
+    minuti = tv ? oriTurno*60 : (isNotteD1(g) ? 12*60 : 0);
+    stra=0;
+  } else if(!tv && !(r&&r.t) && isLiberoD1(g)){ minuti=0; }
+  else if(tipo==="lav"){
+    minuti=minFascia(r.m);
+    stra=Math.max(0,minuti/60-limiteGiorno(g));
+  } else {
+    /* giornata retribuita prevista (contrattuale), anche se non lavorata */
+    orePian = (isNotteD1(g)||isLiberoD1(g)||isRepD2(g)) ? 0 : minFascia(fasciaDi(g))/60;
+  }
+  const ore=minuti/60;
+  return {record:r, tipo, turno:tv, minuti, ore, stra, orePian,
+          note:noteTxt(r), noteLista:noteDi(r),
+          lavorato:(tipo==="lav"||!!tv), feria:tipo==="feria", permesso:tipo==="permesso"};
+}
+function settimanaDi(g){ /* chiave settimana = lunedì */
+  const gi=clsLun(g), l=new Date(g.getFullYear(),g.getMonth(),g.getDate());
+  l.setDate(l.getDate()-gi); return iso(l);
+}
+
+/* ============ VISTA OGGI ============ */
+function renderOggi(){
+  const g=new Date(); const k=iso(g);
+  document.getElementById("hTtl").textContent="Oggi";
+  document.getElementById("hSub").textContent=giornoNome(g)+" "+g.getDate()+" "+meseNome(g)+" "+g.getFullYear();
+
+  let minuti=0, str=0;
+  const r=DATI[k];
+  const gen = !(r&&r.turno) ? (isNotteD1(g)?"notte":(isLiberoD1(g)?"libero":(isRepD2(g)?"reperibilita":null))) : null;
+  if(STATO && STATO.g && STATO.inizio){
+    const dt=new Date(STATO.inizio);
+    minuti=Math.max(0,Math.round((Date.now()-dt.getTime())/60000));
+    str=Math.max(0,minuti/60-SET.soglia);
+  } else if(r&&r.g){
+    minuti=minFascia(r.m);
+    str=(clsLun(g)===3)?0:Math.max(0,minuti/60-limiteGiorno(g));
+  }
+  const tg=tipoGiorno(k);
+  const dd=datiGiorno(g);
+  document.getElementById("oOre").innerHTML=oreTxt((tg==="lav")?(minuti/60):dd.orePian)+"<span> h</span>";
+
+  const st=document.getElementById("oStato");
+  const etichetta=ETICHETTE[tg];
+  if(etichetta){
+    st.innerHTML='<span class="dot"></span><span>'+etichetta+'</span>';
+  } else if(STATO&&STATO.g){
+    st.innerHTML='<span class="dot live"></span><span>In corso dalle '+new Date(STATO.inizio).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})+'</span>';
+  } else {
+    st.innerHTML='<span class="dot"></span><span>'+(r&&r.g?"Giornata chiusa":"Fuori servizio")+'</span>';
+  }
+
+  const f=fasciaDi(g)||[null,null,null,null];
+  let tx="<b>Orario di oggi:</b> "+fmtOra(f[0])+"–"+fmtOra(f[1]);
+  if(f[2]) tx+=" · "+fmtOra(f[2])+"–"+fmtOra(f[3]);
+  tx+=" — previsto <b>"+oreTxt(minFascia(f)/60)+" h</b>";
+  if(r&&r.turno){
+    const tn=TURNI[r.turno];
+    if(tn) tx="<b>Turno di oggi:</b> "+tn.nome+" — <b>"+oreTxt(oreTurnoDi(r))+" h</b>"+
+      ((r.oreTurno!=null&&r.oreTurno!==tn.ore)?" (durata modificata)":"")+
+      "<br><span>Limite giornaliero "+oreTxt(limiteGiorno(g))+" h: le ore oltre sono straordinario.</span>";
+  }
+  document.getElementById("oSched").innerHTML=tx;
+
+  if(gen){
+    const msg={ notte:"Turno di notte (dopo il D1)", libero:"Libero (dopo il D1)",
+                reperibilita:"Reperibilità notturna (dopo il D2)" };
+    const dainc = gen==="reperibilita" ? "dal turno D2" : "dal turno D1";
+    document.getElementById("oSched").innerHTML="<b>"+msg[gen]+"</b><br><span>Giornata generata "+dainc+": non produce straordinario.</span>";
+  }
+
+  const pl=document.getElementById("oStr");
+  pl.className="pill"+(str<=0?" zero":"");
+  pl.innerHTML='<span>Straordinario oggi</span><span class="n">'+oreTxt(str)+' h</span>';
+
+  const nn=noteDi(r);
+  const rn=nn.length?("<b>Note:</b> "+nn.map(o=>((o.ora?"<b>"+o.ora+"</b> ":"")+String(o.testo).replace(/</g,"&lt;"))).join(" · ")+" — "):"";
+  const nb=rn+((r&&r.g)?"Puoi correggere gli orari con il pulsante qui sopra, o dal <b>Calendario</b> per gli altri giorni."
+                    :"A fine giornata tocca <b>Inserisci orari di oggi</b> e scrivi entrata e uscita. Per altri giorni usa il <b>Calendario</b>.");
+  document.getElementById("oNoteTx").innerHTML=nb;
+
+  document.getElementById("bIn").textContent=(r&&r.g)?"Modifica orari di oggi":"Inserisci orari di oggi";
+}
+function straCalc(ms,minuti){ return Math.max(0,minuti/60-SET.soglia); }
+
+/* ============ CALENDARIO ============ */
+let calAnno,calMese;
+function renderCal(){
+  const a=new Date(); if(calAnno==null){calAnno=a.getFullYear();calMese=a.getMonth();}
+  document.getElementById("cMese").textContent=meseNome(new Date(calAnno,calMese,1))+" "+calAnno;
+  const dow=document.getElementById("cDow");
+  if(!dow.dataset.full){ dow.innerHTML=["L","M","M","G","V","S","D"].map(x=>'<div class="dow">'+x+"</div>").join(""); dow.dataset.full="1"; }
+
+  const primo=new Date(calAnno,calMese,1);
+  const off=(primo.getDay()+6)%7;
+  const ggMese=new Date(calAnno,calMese+1,0).getDate();
+  const t=new Date(); t.setHours(0,0,0,0);
+  let h="";
+  for(let i=0;i<off;i++) h+='<div class="day pad"></div>';
+  for(let n=1;n<=ggMese;n++){
+    const g=new Date(calAnno,calMese,n), k=iso(g), r=DATI[k];
+    const cls=clsLun(g), tg=tipoGiorno(k);
+    let tipo="riposo", txt="";
+    if(r&&r.turno){
+      tipo = r.turno==="d1" ? "notte" : "turno";
+      txt = TURNI[r.turno] ? TURNI[r.turno].corte : "T";
+    }
+    else if(tg==="notte"){ tipo="notte"; txt="N"; }
+    else if(tg==="libero" && (isLiberoD1(g)||(r&&r.t==="libero"))){ tipo="riposo"; txt="L"; }
+    else if(tg==="reperibilita"){ tipo="reper"; txt="R"; }
+    else if(tg==="feria"){ tipo="fera"; txt="F"; }
+    else if(tg==="permesso"){ tipo="perm"; txt="P"; }
+    else if(tg==="malattia"){ tipo="mal"; txt="M"; }
+    else if(tg==="visita"){ tipo="vis"; txt="V"; }
+    else if(tg==="lav"){ const mm=minFascia(r.m), o=mm/60, lim=limiteGiorno(g);
+      const isStr=o>lim;
+      tipo = isStr ? "str" : (o>=7 ? "8" : (o>0?"4":"riposo"));
+      txt=oreTxt(o)+"h";
+    } else if(g<t && cls!==6){ const o=minFascia(fasciaDi(g))/60;
+      tipo = o>=7?"8":(o>0?"4":"riposo"); txt=o>0?oreTxt(o)+"h":"";
+    } else if(cls===6){ tipo="riposo"; }
+    const isT=(g.getTime()===t.getTime())?" today":"";
+    h+='<div class="day tipo-'+tipo+isT+'" data-d="'+k+'"><span class="n">'+n+'</span>'+(txt?'<span class="h">'+txt+"</span>":"")+"</div>";
+  }
+  document.getElementById("cGriglia").innerHTML=h;
+}
+
+/* ============ RIEPILOGO ============ */
+let ripAnno,ripMese;
+function renderRip(){
+  const a=new Date(); if(ripAnno==null){ripAnno=a.getFullYear();ripMese=a.getMonth();}
+  document.getElementById("rMese").textContent=meseNome(new Date(ripAnno,ripMese,1))+" "+ripAnno;
+  const gg=new Date(ripAnno,ripMese+1,0).getDate();
+  let totOre=0,totStr=0,sab=0, ggFerie=0, ggPerm=0, ggMal=0, ggVis=0,
+      oreFerie=0, orePerm=0, oreMal=0, oreVis=0;
+  const settimane={}; /* chiave lunedì -> {ore,str,eti} */
+  for(let n=1;n<=gg;n++){
+    const g=new Date(ripAnno,ripMese,n), d=datiGiorno(g);
+    totOre+=d.ore; totStr+=d.stra;
+    if(d.feria){ ggFerie++; oreFerie+=d.orePian; }
+    if(d.permesso){ ggPerm++; orePerm+=d.orePian; }
+    if(!d.ore) continue;
+    if(clsLun(g)===5) sab++;
+    const sk=settimanaDi(g);
+    if(!settimane[sk]) settimane[sk]={ore:0,str:0,eti:"S"+Object.keys(settimane).length};
+    settimane[sk].ore+=d.ore; settimane[sk].str+=d.stra;
+  }
+  const tot=Math.max(1,Math.max(...Object.values(settimane).map(s=>s.ore),1));
+  document.getElementById("rOre").innerHTML=oreTxt(totOre)+"<small> h</small>";
+  document.getElementById("rStr").innerHTML=oreTxt(totStr)+"<small> h</small>";
+  document.getElementById("rSab").textContent=sab;
+  document.getElementById("rFer").innerHTML=ggFerie+"<small> gg</small>";
+  document.getElementById("rPer").innerHTML=ggPerm+"<small> gg</small>";
+  const riep=document.getElementById("rFerie");
+  if(riep){
+    const totAss=ggFerie+ggPerm+ggMal+ggVis, oreAss=oreFerie+orePerm+oreMal+oreVis;
+    riep.innerHTML = (totAss===0)
+      ? '<div class="lbl" style="margin-bottom:8px">Assenze e visite</div>'+
+        '<div class="note" style="margin:0">Nessun giorno di ferie, permesso, malattia o visita medica in '+
+        meseNome(new Date(ripAnno,ripMese,1))+' questo mese.<br>Per segnarli, tocca un giorno sul calendario.</div>'
+      : '<div class="lbl" style="margin-bottom:8px">Assenze e visite</div>'+
+        '<div class="riga"><span>Ferie</span><span class="v">'+ggFerie+' gg · '+oreTxt(oreFerie)+' h</span></div>'+
+        '<div class="riga"><span>Permessi</span><span class="v">'+ggPerm+' gg · '+oreTxt(orePerm)+' h</span></div>'+
+        '<div class="riga"><span>Malattia</span><span class="v">'+ggMal+' gg · '+oreTxt(oreMal)+' h</span></div>'+
+        '<div class="riga"><span>Visite mediche</span><span class="v">'+ggVis+' gg · '+oreTxt(oreVis)+' h</span></div>'+
+        '<div class="riga" style="font-weight:700"><span>Totale giorni</span><span class="v">'+
+        totAss+' gg · '+oreTxt(oreAss)+' h retribuite</span></div>';
+  }
+
+  const bars=Object.keys(settimane).sort().map((k,i)=>{
+    const s=settimane[k], hOre=Math.round(s.ore/tot*100), hStr=s.ore>0?Math.round(s.str/s.ore*100):0;
+    return '<div class="barw"><div class="vv">'+oreTxt(s.ore)+'</div>'+
+      '<div class="bar" style="height:'+hOre+'%;background:#4a9eff">'+
+      (hStr>0?'<div class="str" style="height:'+hStr+'%"></div>':'')+
+      '</div><div class="cl">G'+Object.keys(settimane).sort().indexOf(k)+1+"</div></div>";
+  }).join("");
+  document.getElementById("rBars").innerHTML=bars||'<div class="empty">Nessun dato per questo mese.</div>';
+
+  let h='<div class="lbl" style="margin-bottom:8px">Dettaglio per giornata</div>';
+  let testo=[];
+  for(let n=1;n<=gg;n++){
+    const g=new Date(ripAnno,ripMese,n), d=datiGiorno(g);
+    if(d.tipo && d.tipo!=="lav"){
+      testo.push(g.getDate()+" "+giornoNome(g).slice(0,3)+" · "+ETICHETTE[d.tipo].toUpperCase()+
+                 (d.orePian>0?" · "+oreTxt(d.orePian)+" h retribuite":"")+
+                 ((d.noteLista&&d.noteLista.length)?(" · "+d.noteLista.map(o=>((o.ora?o.ora+" ":"")+o.testo)).join(" · ")):""));
+      continue;
+    }
+    if(!d.ore){
+      const nn=d.noteLista||[];
+      if(nn.length) nn.forEach(o=>testo.push(g.getDate()+" "+giornoNome(g).slice(0,3)+" · "+(o.ora?o.ora+" ":"")+o.testo));
+      continue;
+    }
+    testo.push(g.getDate()+" "+giornoNome(g).slice(0,3)+" · "+(d.turno?TURNI[d.turno].corte+" ":"")+oreTxt(d.ore)+" h"+
+               (d.stra>0?" · straord. "+oreTxt(d.stra)+" h":"")+
+               ((d.noteLista&&d.noteLista.length)?(" · "+d.noteLista.map(o=>((o.ora?o.ora+" ":"")+o.testo)).join(" · ")):""));
+  }
+  h += testo.length ? testo.map(x=>'<div class="riga"><span>'+x+"</span></div>").join("")
+        : '<div class="empty">Ancora nessuna ora registrata in '+meseNome(new Date(ripAnno,ripMese,1))+
+          '.<br>Usa la vista di oggi per iniziare.</div>';
+  h += '<div class="riga" style="margin-top:8px;font-weight:700"><span>Totale mese</span><span class="v">'+oreTxt(totOre)+
+       ' h <span class="v str">(+'+oreTxt(totStr)+' h straord.)</span></span></div>';
+  document.getElementById("rDett").innerHTML=h;
+}
+
+/* ============ IMPOSTAZIONI ============ */
+function statoGoogOld(){
+  const u=document.getElementById("gUrl"), t=document.getElementById("gTok");
+  if(u) u.value=GOOG.url||""; if(t) t.value=GOOG.tok||"";
+}
+function esito(t,cat){
+  const e=document.getElementById("gEsito");
+  if(!e) return; e.textContent=t||"";
+  e.style.color=(cat==="err")?"#c0392b":(cat==="ok"?"#1e8e5a":"");
+}
+function renderSet(){
+  const c=document.getElementById("sGiorni");
+  c.innerHTML=GIORNI.map((nm,i)=>{
+    const f=SET.orari[i]||FASCIA_STD[i];
+    const pome=(i===3)?'<div class="orari"><span class="ar">pomeriggio solo il giovedì di recupero</span></div>':"";
+    return '<div class="setrow"><div style="flex:1"><div class="nm">'+nm+'</div>'+
+      '<div class="orari"><input class="field" type="time" data-i="'+i+'" data-p="0" value="'+(f[0]||"")+'">'+
+      '<span class="ar">–</span><input class="field" type="time" data-i="'+i+'" data-p="1" value="'+(f[1]||"")+'">'+
+      (f[2]?'<span class="ar">·</span><input class="field" type="time" data-i="'+i+'" data-p="2" value="'+f[2]+'">'+
+      '<span class="ar">–</span><input class="field" type="time" data-i="'+i+'" data-p="3" value="'+(f[3]||"")+'">':"")+
+      '</div>'+pome+'</div><div style="font-size:13px;font-weight:700;color:var(--ink2)">'+
+      oreTxt(minFascia(f)/60)+' h</div></div>';
+  }).join("");
+  const st=document.getElementById("sTurni");
+  if(st) st.innerHTML=TIPI_TURNO_SEMPLICI.map(t=>'<div class="setrow"><div style="flex:1"><div class="nm">'+TURNI[t].nome+
+    ' · 12 h</div><div class="su">Dodici ore di servizio. Il riposo dopo lo segni tu.</div></div>'+
+    '<div style="font-size:13px;font-weight:700;color:var(--ink2)">'+oreTxt(TURNI[t].ore)+' h</div></div>').join("")
+    +'<div class="setrow"><div style="flex:1"><div class="nm">D1 · 12 h</div>'+
+    '<div class="su">Dodici ore di servizio, poi in automatico:</div></div>'+
+    '<div style="font-size:13px;font-weight:700;color:var(--ink2)">'+oreTxt(TURNI.d1.ore)+' h</div></div>'
+    +'<div class="setrow"><div style="flex:1"><div class="nm">D2 · 12 h</div>'+
+    '<div class="su">Dodici ore di servizio, poi in automatico:</div></div>'+
+    '<div style="font-size:13px;font-weight:700;color:var(--ink2)">'+oreTxt(TURNI.d2.ore)+' h</div></div>'
+    +'<div class="calc" style="background:#eef4fb;color:#0d5a9c">Dopo ogni <b>D1</b>: il giorno seguente diventa '+
+    '<b>Turno di notte</b>, poi <b>Libero</b> nei due giorni successivi. Dopo ogni <b>D2</b>: il giorno seguente diventa '+
+    '<b>Reperibilità notturna</b>. Questi giorni si segnano da soli e non producono straordinario. Se ti serve '+
+    'diverso, togli il turno o sovrascrivi il singolo giorno dal calendario.</div>';
+  document.getElementById("sSoglia").value=String(SET.soglia).replace(".",",");
+  chiaveStato();
+  const gu=document.getElementById("gUrl"), gt=document.getElementById("gTok");
+  if(gu) gu.value=GOOG.url||"";
+  if(gt) gt.value=GOOG.tok||"";
+}
+document.getElementById("sGiorni").addEventListener("change",e=>{
+  const el=e.target; if(!el.dataset||el.dataset.i===undefined) return;
+  const i=+el.dataset.i, p=+el.dataset.p;
+  if(p>1 && !SET.orari[i][2]){ SET.orari[i][2]="16:00"; SET.orari[i][3]="19:30"; }
+  SET.orari[i][p]=el.value;
+  salvaS(); renderSet(); renderOggi(); renderCal(); renderRip();
+});
+document.getElementById("sSoglia").addEventListener("change",e=>{
+  const v=parseFloat(String(e.target.value).replace(",","."));
+  SET.soglia=isNaN(v)?8:Math.min(16,Math.max(0,v)); salvaS(); renderSet(); renderOggi(); renderRip();
+});
+document.getElementById("bReset").addEventListener("click",()=>{
+  if(!confirm("Ripristinare orario, soglia e impostazioni iniziali? I dati registrati non vengono toccati.")) return;
+  SET={soglia:9,orari:JSON.parse(JSON.stringify(FASCIA_STD))};
+  salvaS(); renderSet(); renderOggi(); renderCal(); renderRip(); mostra("Impostazioni ripristinate");
+});
+
+/* ============ SCHEDA GIORNO ============ */
+function apriGiorno(k){
+  const g=daIso(k), r=DATI[k];
+  const f=(r&&r.g&&r.m)?r.m:fasciaDi(g);
+  const gi=clsLun(g);
+  const isSab=(gi===5);
+  const tg=tipoGiorno(k);
+  let stato="Nessuna ora registrata";
+  if(r&&r.turno) stato=TURNI[r.turno].nome+" · "+oreTxt(oreTurnoDi(r))+" h";
+  else if(tg==="lav") stato="Ore lavorate registrate";
+  else if(tg) stato=ETICHETTE[tg];
+  document.getElementById("sheet").innerHTML=
+    '<h3>'+giornoNome(g)+" "+g.getDate()+" "+meseNome(g)+'</h3>'+
+    '<div class="when">'+stato+'</div>'+
+    '<div class="ab">'+
+      '<button class="tg" data-t="lav">'+(tg==="lav"?"✓ ":"")+'Ore lavorate</button>'+
+      '<button class="tg fera" data-t="feria">'+(tg==="feria"?"✓ ":"")+'Ferie</button>'+
+      '<button class="tg perm" data-t="permesso">'+(tg==="permesso"?"✓ ":"")+'Permesso</button>'+
+      '<button class="tg mal" data-t="malattia">'+(tg==="malattia"?"✓ ":"")+'Malattia</button>'+
+      '<button class="tg vis" data-t="visita">'+(tg==="visita"?"✓ ":"")+'Visita medica</button>'+
+      '<button class="tg" data-t="libero">'+(tg==="libero"?"✓ ":"")+'Libero</button>'+
+    '</div>'+
+    '<div class="lbl" style="margin:2px 0 8px">Turni</div>'+
+    '<div class="ab">'+
+      TIPI_TURNO.map(t=>'<button class="tg '+t+'" data-t="'+t+'">'+
+        ((r&&r.turno===t)?"✓ ":"")+TURNI[t].nome+'</button>').join("")+
+    '</div>'+
+    '<div class="fld" id="fOreBox" style="display:none"><label>Ore del turno</label>'+
+      '<input class="field num" type="number" id="fOre" inputmode="decimal" min="0" max="24" step="0.5" value="12"></div>'+
+    '<div id="fBox" style="'+(tg==="lav"?"":"display:none")+'">'+
+      '<div class="fld2"><div class="fld"><label>Inizio mattina</label><input type="time" id="f0" value="'+(f[0]||"08:30")+'"></div>'+
+      '<div class="fld"><label>Fine mattina</label><input type="time" id="f1" value="'+(f[1]||"13:00")+'"></div></div>'+
+      '<div class="fld2"><div class="fld"><label>Inizio pomeriggio</label><input type="time" id="f2" value="'+(f[2]||"")+'"></div>'+
+      '<div class="fld"><label>Fine pomeriggio</label><input type="time" id="f3" value="'+(f[3]||"")+'"></div></div>'+
+      '<div class="calc" id="fCalc"></div>'+
+    '</div>'+
+    '<div class="calc" id="fCat" style="display:none"></div>'+
+    '<div class="fld" style="margin-top:12px"><label>Note e impegni</label>'+
+      '<div class="nlist" id="fNoteLista"></div>'+
+      '<button class="b-add" id="fNoteAdd" type="button">+ Aggiungi nota o impegno</button>'+
+      '<div class="note" style="margin-top:6px">Scrivi liberamente: un orario e cosa devi fare. Le note finiscono nel CSV e negli eventi del calendario.</div>'+
+    '</div>'+
+
+    '<div class="row2"><button class="b-gray" id="fAnn">Annulla</button><button class="b-prim" id="fOk">Salva</button></div>'+
+    ((r&&(r.g||r.turno))?'<button class="b-del b-wide" id="fDel">Elimina le ore di questo giorno</button>':"");
+  /* --- note e impegni del giorno --- */
+  const lista=()=>document.getElementById("fNoteLista");
+  const riga=(o)=>{
+    const d=document.createElement("div"); d.className="nrow";
+    d.innerHTML='<input type="time" value="'+(o&&o.ora?o.ora:"")+'">'+
+      '<input type="text" maxlength="80" placeholder="nota o impegno" value="'+((o&&o.testo)?String(o.testo).replace(/"/g,"&quot;"):"")+'">'+
+      '<button class="x" type="button" title="Togli">×</button>';
+    d.querySelector(".x").addEventListener("click",()=>d.remove());
+    return d;
+  };
+  const noteDelGiorno=()=>{
+    const vecchie=(r&&(r.note||r.noteLista))||[];
+    if(r&&r.note) return [{ora:"",testo:r.note}];
+    return Array.isArray(r&&r.noteLista)?r.noteLista.slice():[];
+  };
+  const disegnaNote=()=>{
+    const L=lista(); if(!L) return;
+    L.innerHTML="";
+    noteDelGiorno().forEach(o=>L.appendChild(riga(o)));
+  };
+  disegnaNote();
+  const bAdd=document.getElementById("fNoteAdd");
+  if(bAdd) bAdd.addEventListener("click",()=>{ lista().appendChild(riga(null)); });
+  const leggiNote=()=>{
+    const L=lista(); if(!L) return [];
+    return Array.from(L.querySelectorAll(".nrow")).map(d=>{
+      const ora=(d.querySelector("input[type=time]").value||"").trim();
+      const testo=(d.querySelector("input[type=text]").value||"").trim();
+      return (ora||testo)?{ora:ora,testo:testo}:null;
+    }).filter(Boolean);
+  };
+  document.getElementById("ov").classList.add("on");
+  const upd=()=>{
+    const lim=limiteGiorno(g);
+    if(TIPI_TURNO.indexOf(scelta)>=0){
+      const o=oreTurnoScelta();
+      document.getElementById("fCalc").innerHTML="Turno: <b>"+oreTxt(o)+" h</b> · "+
+        "<span style=\"color:#1e8e5a;font-weight:700\">nessuno straordinario</span>";
+      return;
+    }
+    const m=minFascia([v("f0"),v("f1"),v("f2"),v("f3")]);
+    const ii=min(v("f0")), us=min(v("f1"));
+    const oi=orariIngresso(g);
+    let cav="";
+    if(oi && ii!=null && us!=null && us>ii){
+      /* la fascia per timbrare va dalle 7:30 alle 8:30.
+         Entrando prima, le ore contano dalle 7:30; entrando dopo le 8:30 si recupera all'uscita
+         o si chiede un permesso. Le ore sono sempre quelle effettive, quindi dopo le 8:30
+         il tempo oltre le 9 h e' straordinario. */
+      /* la fascia per timbrare e' 7:30-8:30.
+         Entrando prima delle 7:30, le ore si contano dalle 7:30.
+         Entrando dopo le 8:30, ogni minuto di ritardo si recupera di uscita, altrimenti e' carenza. */
+      /* la giornata vale le ore del giorno (li) e si timbra tra le 7:30 e le 8:30.
+         Entrando dopo le 8:30, i minuti di ritardo si recuperano spostando l'uscita,
+         altrimenti restano come carenza. */
+      const li=Math.round(lim*60);
+      const previsto=Math.max(us-li, oi.prev);      /* inizio valido della giornata */
+      const ritardo=Math.max(0,ii-oi.max);
+      const uscitaOk=previsto+li+ritardo;
+      const lavorato=Math.max(0,(us-previsto)/60);
+      const carenzaSolo=Math.max(0,li-(us-previsto));
+      const fascia=(ii<oi.prev)?("Timbratura anticipata ("+impOra(ii)+"): le ore si contano comunque dalle "+
+                    impOra(oi.prev)+", quindi la giornata finisce alle "+impOra(oi.prev+li)+"."):
+                  (ii>oi.max?("Timbratura dopo le "+impOra(oi.max)+": recuperi uscendo alle "+impOra(uscitaOk)+
+                    ", oppure chiedi un permesso di "+ritardo+" min."):
+                   ("Timbratura nella fascia "+impOra(oi.prev)+"–"+impOra(oi.max)+": giornata dalle "+impOra(ii)+
+                    " alle "+impOra(ii+li)+"."));
+      const regola='<div class="calc" style="background:#f4f7fb;color:#5d6b85">Fascia per timbrare: dalle <b>'+
+        impOra(oi.prev)+'</b> alle <b>'+impOra(oi.max)+'</b>. Prima di '+impOra(oi.prev)+
+        ' le ore si contano dalla '+impOra(oi.prev)+'; dopo le '+impOra(oi.max)+
+        ' si recupera all\'uscita o si chiede un permesso.</div>';
+      const stato=(carenzaSolo>0)?(' · <b style="color:#c0392b">carenza '+carenzaSolo+' min</b>')
+                 :(ritardo>0?' · <b style="color:#1e8e5a">recuperati all\'uscita</b>':' · giornata completa');
+      cav='<div class="calc" style="background:#eef4fb;color:#0d5a9c">'+fascia+'<br>Ore lavorate <b>'+
+        oreTxt(lavorato)+' h</b> · limite '+oreTxt(lim)+' h'+stato+'</div>'+regola;
+    }
+    const str=(oi && ii!=null && us!=null && us>ii)
+      ? Math.max(0,((us-(Math.max(us-Math.round(lim*60),oi.prev)+Math.round(lim*60)))/60))
+      : Math.max(0,m/60-lim);
+    document.getElementById("fCalc").innerHTML="Ore lavorate: <b>"+impDurata(m)+"</b> ("+oreTxt(m/60)+" h) · limite "+
+      oreTxt(lim)+" h · straordinario <b class='"+(str>0?"str":"")+"'>"+oreTxt(str)+" h</b>"+cav;
+  };
+  const v=id=>{const e=document.getElementById(id); return e?e.value:"";};
+  const oreTurnoIniziale=t=>(r&&r.turno===t&&r.oreTurno!=null)?String(r.oreTurno).replace(".",","):String(TURNI[t].ore).replace(".",",");
+  const oreTurnoScelta=()=>{
+    if(r&&r.turno===scelta&&r.oreTurno!=null) return r.oreTurno;
+    const n=parseFloat(String(v("fOre")).replace(",","."));
+    return isNaN(n)?TURNI[scelta].ore:Math.min(24,Math.max(0,n));
+  };
+  const notaTx=()=>{const e=document.getElementById("fNote"); return e?(e.value||"").trim():"";};
+  const noteLista=()=>leggiNote();
+  ["f0","f1","f2","f3","fOre"].forEach(id=>{ const e=document.getElementById(id); if(e) e.addEventListener("input",upd); });
+
+  /* scelta del tipo di giornata */
+  let scelta=tg||"lav";
+  const impostaScelta=t=>{
+    scelta=t;
+    document.querySelectorAll(".ab button").forEach(b=>{
+      const att=b.dataset.t===t;
+      b.classList.toggle("on",att);
+      b.textContent=(att?"✓ ":"")+b.textContent.replace("✓ ","");
+    });
+    const isTurno=TIPI_TURNO.indexOf(t)>=0;
+    document.getElementById("fBox").style.display=(t==="lav")?"":"none";
+    document.getElementById("fOreBox").style.display=isTurno?"":"none";
+    if(isTurno) document.getElementById("fOre").value=oreTurnoIniziale(t);
+    const fc=document.getElementById("fCat");
+    if(fc){
+      if(t==="d1"){ fc.style.display=""; fc.innerHTML="⏱ <b>Catena automatica</b><br>Dopo questo D1: domani <b>Turno di notte</b> (12 h), poi <b>Libero</b> per due giorni."; }
+      else if(t==="d2"){ fc.style.display=""; fc.innerHTML="⏱ <b>Catena automatica</b><br>Dopo questo D2: domani <b>Reperibilità notturna</b> (0 h di servizio)."; }
+      else { fc.style.display="none"; fc.innerHTML=""; }
+    }
+    upd();
+  };
+  document.querySelectorAll(".ab button").forEach(b=>b.addEventListener("click",()=>impostaScelta(b.dataset.t)));
+  impostaScelta(scelta);
+
+  document.getElementById("fAnn").addEventListener("click",chiudi);
+  document.getElementById("fOk").addEventListener("click",()=>{
+    if(TIPI_TURNO.indexOf(scelta)>=0){
+      const o=oreTurnoScelta();
+      const rec={g:true,m:null,turno:scelta,oreTurno:(o!==TURNI[scelta].ore?o:undefined),
+                 noteLista:noteLista().length?noteLista():undefined};
+      DATI[k]=rec; salvaD(); chiudi(); aggiornaTutto();
+      mostra("Turno salvato · "+oreTxt(o)+" h");
+      return;
+    }
+    if(scelta!=="lav"){
+      DATI[k]={g:false,m:null,t:scelta,noteLista:noteLista().length?noteLista():undefined};
+      salvaD(); chiudi(); aggiornaTutto();
+      const msg={feria:"Segnato come ferie",permesso:"Segnato come permesso",
+                 malattia:"Segnato come malattia",visita:"Segnata la visita medica",
+                 libero:"Segnato come libero"};
+      mostra(msg[scelta]||"Giornata salvata"); return;
+    }
+    const m=[v("f0"),v("f1"),v("f2"),v("f3")];
+    if(!m[0]||!m[1]){ mostra("Inserisci almeno l'orario del mattino"); return; }
+    if(min(m[1])<=min(m[0])){ mostra("L'orario di fine mattina deve essere dopo l'inizio"); return; }
+    if((m[2]&&!m[3])||(!m[2]&&m[3])){ mostra("Completa entrambi gli orari del pomeriggio"); return; }
+    if(m[2]&&min(m[3])<=min(m[2])){ mostra("L'orario di fine pomeriggio deve essere dopo l'inizio"); return; }
+    if(m[2]&&min(m[2])<min(m[1])){ mostra("Il pomeriggio non può iniziare prima della fine mattina"); return; }
+    DATI[k]={g:true,m:m,noteLista:noteLista().length?noteLista():undefined};
+    salvaD(); chiudi(); aggiornaTutto();
+    const tot=minFascia(m)/60;
+    const str=(isNotteD1(g)||isLiberoD1(g)||isRepD2(g))?0:Math.max(0,tot-limiteGiorno(g));
+    mostra(str>0?("Salvato · "+oreTxt(str)+" h di straordinario"):"Giornata salvata · "+oreTxt(tot)+" h");
+  });
+  const del=document.getElementById("fDel"); if(del) del.addEventListener("click",()=>{
+    delete DATI[k]; salvaD(); chiudi(); aggiornaTutto(); mostra("Giornata eliminata");
+  });
+  upd();
+}
+function chiudi(){ document.getElementById("ov").classList.remove("on"); }
+document.getElementById("ov").addEventListener("click",e=>{ if(e.target.id==="ov") chiudi(); });
+document.getElementById("cGriglia").addEventListener("click",e=>{
+  const d=e.target.closest(".day"); if(d&&d.dataset.d) apriGiorno(d.dataset.d);
+});
+
+/* ============ TIMER ============ */
+document.getElementById("bIn").addEventListener("click",()=>{
+  apriGiorno(iso(new Date()));
+});
+/* ============ ICS ============ */
+document.getElementById("bIcs").addEventListener("click",()=>{
+  const gg=new Date(ripAnno,ripMese+1,0).getDate();
+  const pad2=n=>String(n).padStart(2,"0");
+  const esc=t=>String(t||"").replace(/[\\;,]/g,m=>"\\"+m).replace(/\n/g,"\\n");
+  const dt=k=>k.replace(/-/g,"");
+  const succ=(k,m0)=>{const d=daIso(k);d.setMinutes(d.getMinutes()+m0);return dt(iso(d));};
+  const righe=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Turni Vigili del Fuoco//IT",
+               "CALSCALE:GREGORIAN","X-WR-CALNAME:Turni e straordinari"];
+  let n=0;
+  for(let i=1;i<=gg;i++){
+    const g=new Date(ripAnno,ripMese,i), k=iso(g), d=datiGiorno(g);
+    const et=ETICHETTE[d.tipo]||"";
+    let ini=null, fine=null, titolo="";
+    if(d.turno){
+      const o=oreTurnoDi(d);
+      righe.push("BEGIN:VEVENT","UID:"+k+"-turno"+n+"@orari","DTSTAMP:"+dt(iso(new Date()))+"T000000",
+        "DTSTART:"+dt(k)+"T080000",
+        "DTEND:"+succ(k,Math.round(o*60))+"T"+pad2((8+Math.floor(o))%24)+pad2(Math.round((o%1)*60))+"00",
+        "SUMMARY:"+esc(TURNI[d.turno].nome+" · "+oreTxt(o)+" h"),
+        "DESCRIPTION:"+esc("Turno: "+TURNI[d.turno].nome+". Ore: "+oreTxt(o)+" h"+
+          (d.stra>0?". Straordinario: "+oreTxt(d.stra)+" h":"")+(d.note?". Nota: "+d.note:"")),
+        "END:VEVENT");
+    } else if(d.tipo==="lav" && d.minuti>0){
+      const m=d.record.m, mate=m[0]&&m[1], pome=m[2]&&m[3];
+      const fasce=[]; if(mate) fasce.push([m[0],m[1]]); if(pome) fasce.push([m[2],m[3]]);
+      fasce.forEach(f=>{
+        ini=dt(k)+"T"+f[0].replace(":","")+"00";
+        fine=dt(k)+"T"+f[1].replace(":","")+"00";
+        titolo=(f===fasce[0]&&fasce.length>1)?"Lavoro (mattina)":(fasce.length>1?"Lavoro (pomeriggio)":"Lavoro");
+        righe.push("BEGIN:VEVENT","UID:"+k+"-"+f[0].replace(":","")+n+"@orari","DTSTAMP:"+dt(iso(new Date()))+"T000000",
+          "DTSTART:"+ini,"DTEND:"+fine,
+          "SUMMARY:"+esc(titolo+(d.note?" · "+d.note:"")),
+          "DESCRIPTION:"+esc("Ore lavorate: "+oreTxt(d.ore)+" h"+(d.stra>0?" · straordinario "+oreTxt(d.stra)+" h":"")+
+          ((d.noteLista&&d.noteLista.length)?("\n"+(d.noteLista.map(o=>((o.ora?o.ora+" ":"")+o.testo)).join("\n"))):"")),
+          "END:VEVENT");
+      });
+      if(d.stra>=0.01){
+        const last=fasce[fasce.length-1];
+        const daMin=min(last[1]), aMin=daMin+Math.max(1,Math.round(d.stra*60));
+        righe.push("BEGIN:VEVENT","UID:"+k+"-stra"+n+"@orari","DTSTAMP:"+dt(iso(new Date()))+"T000000",
+          "DTSTART:"+dt(k)+"T"+pad2(Math.floor(daMin/60))+pad2(daMin%60)+"00",
+          "DTEND:"+succ(k,aMin)+"T"+pad2(Math.floor(aMin/60)%24)+pad2(aMin%60)+"00",
+          "SUMMARY:"+esc("Straordinario · "+oreTxt(d.stra)+" h"),
+          "DESCRIPTION:"+esc("Ore straordinarie oltre l'orario contrattuale"),
+          "END:VEVENT");
+      }
+    } else if(d.tipo && d.tipo!=="lav"){
+      const oreP=d.orePian>0?d.orePian:0;
+      if(oreP>0){
+        const f=fasciaDi(g);
+        ini=dt(k)+"T"+f[0].replace(":","")+"00";
+        fine=dt(k)+"T"+f[1].replace(":","")+"00";
+      } else {
+        ini=dt(k)+"T080000"; fine=dt(k)+"T090000";
+      }
+      righe.push("BEGIN:VEVENT","UID:"+k+"-ass"+n+"@orari","DTSTAMP:"+dt(iso(new Date()))+"T000000",
+        "DTSTART:"+ini,"DTEND:"+fine,
+        "SUMMARY:"+esc(et+(d.note?" · "+d.note:"")),
+        "DESCRIPTION:"+esc("Giornata a "+et.toLowerCase()),
+        "END:VEVENT");
+    }
+    n++;
+  }
+  righe.push("END:VCALENDAR");
+  const b=new Blob([righe.join("\r\n")],{type:"text/calendar;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);
+  a.download="turni-"+meseNome(new Date(ripAnno,ripMese,1))+"-"+ripAnno+".ics";
+  document.body.appendChild(a); a.click(); a.remove();
+  mostra("Calendario esportato · aprilo per aggiungerlo a Google Calendar");
+});
+
+/* ============ GOOGLE CALENDAR ============ */
+function chiaveStato(){
+  const el=document.getElementById("gStato");
+  if(!el) return;
+  const ok=!!(GOOG.url && GOOG.tok);
+  el.className="st "+(ok?"ok":"no");
+  el.textContent=ok?"Collegato":"Non collegato";
+}
+function esito(t,cat){
+  const e=document.getElementById("gEsito");
+  if(!e) return;
+  e.textContent=t||"";
+  e.style.color=(cat==="err")?"#c0392b":(cat==="ok"?"#1e8e5a":"");
+}
+function chiamaGoog(dati){
+  const q=[];
+  Object.keys(dati||{}).forEach(k=>q.push(encodeURIComponent(k)+"="+encodeURIComponent(dati[k])));
+  q.push("token="+encodeURIComponent(GOOG.tok));
+  return fetch(GOOG.url,{
+      method:"POST",
+      mode:"cors",
+      redirect:"follow",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:q.join("&")
+    })
+    .then(r=>r.text())
+    .then(t=>{
+      try{ return JSON.parse(t); }
+      catch(e){ throw new Error("risposta non leggibile: "+t.slice(0,90)); }
+    });
+}
+document.getElementById("gSalva").addEventListener("click",()=>{
+  const u=(document.getElementById("gUrl").value||"").trim();
+  const t=(document.getElementById("gTok").value||"").trim();
+  if(!u||!t){ esito("Servono l'indirizzo dello script e la chiave.","err"); return; }
+  GOOG.url=u; GOOG.tok=t; salvaG(); chiaveStato();
+  esito("Verifico il collegamento...");
+  chiamaGoog({azione:"ping"})
+    .then(r=>{
+      if(r&&r.ok) esito("Collegato al calendario: "+r.calendario,"ok");
+      else esito("Risposta ricevuta ma non valida: "+((r&&r.errore)||"controlla indirizzo e chiave"),"err");
+    })
+    .catch(e=>esito("Non collegato: "+e.message+". Controlla che lo script sia pubblicato con accesso \"Chiunque\".","err"));
+});
+document.getElementById("gInvia").addEventListener("click",()=>{
+  if(!GOOG.url){ esito("Prima collega il tuo script.","err"); return; }
+  const giorni=[], oggi=new Date();
+  [-3,-2,-1,0,1,2,3].forEach(sc=>{
+    const base=new Date(oggi.getFullYear(),oggi.getMonth()+sc,1);
+    const gg=new Date(base.getFullYear(),base.getMonth()+1,0).getDate();
+    for(let n=1;n<=gg;n++){
+      const g=new Date(base.getFullYear(),base.getMonth(),n), d=datiGiorno(g);
+      if(!(d.tipo||d.turno)) continue;
+      giorni.push({data:iso(g),
+                   tipo:d.turno?"turno":(d.tipo==="lav"?"lavoro":"assenza"),
+                   turno:d.turno||"", assenza:d.turno?"":d.tipo, ore:d.ore||0, note:d.note||""});
+    }
+  });
+  if(!giorni.length){ esito("Non ci sono turni da inviare nel periodo.","err"); return; }
+  esito("Invio "+giorni.length+" giornate...");
+  chiamaGoog({azione:"carica", giorni:JSON.stringify(giorni)})
+    .then(r=>{
+      if(r&&r.ok) esito("Inviati "+r.esito.scritti+" giorni su "+r.esito.letti+" · archivio aggiornato.","ok");
+      else esito("Errore: "+((r&&r.errore)||"risposta inattesa"),"err");
+    })
+    .catch(e=>esito("Errore: "+e.message,"err"));
+});
+document.getElementById("gImporta").addEventListener("click",()=>{
+  if(!GOOG.url){ esito("Prima collega il tuo script.","err"); return; }
+  esito("Leggo il calendario...");
+  chiamaGoog({azione:"scarica"})
+    .then(r=>{
+      if(!r||!r.ok){ esito("Errore: "+((r&&r.errore)||"risposta inattesa"),"err"); return; }
+      const elenco=r.turni||[];
+      let cambiati=0, uguali=0;
+      elenco.forEach(t=>{
+        const k=t.data, cur=DATI[k];
+        const rec=(t.tipo==="turno")
+          ? {g:true,m:null,turno:t.turno,note:t.note||undefined}
+          : {g:false,m:null,t:t.assenza||"libero",note:t.note||undefined};
+        if(cur && JSON.stringify(cur)===JSON.stringify(rec)){ uguali++; return; }
+        DATI[k]=rec; cambiati++;
+      });
+      salvaD(); aggiornaTutto();
+      esito("Dal calendario: "+cambiati+" giorni aggiornati"+(uguali?(", "+uguali+" già allineati"):"")+". Vince il calendario.","ok");
+    })
+    .catch(e=>esito("Errore: "+e.message,"err"));
+});
+
+/* ============ CSV ============ */
+document.getElementById("bCsv").addEventListener("click",()=>{
+  const gg=new Date(ripAnno,ripMese+1,0).getDate();
+  const righe=[["Data","Giorno","Tipo","Ore lavorate","Straordinario","Ore retribuite non lavorate","Note"]];
+  let to=0,ts=0,tf=0,tp=0,gf=0,gp=0;
+  for(let n=1;n<=gg;n++){
+    const g=new Date(ripAnno,ripMese,n), d=datiGiorno(g);
+    if(d.tipo && d.tipo!=="lav"){
+      const et=ETICHETTE[d.tipo];
+      if(d.tipo==="feria"){ gf++; tf+=d.orePian; }
+      if(d.tipo==="permesso"){ gp++; tp+=d.orePian; }
+      if(d.tipo==="malattia"){ gm++; tm+=d.orePian; }
+      if(d.tipo==="visita"){ gv++; tv+=d.orePian; }
+      const nnA=d.noteLista||[];
+      if(nnA.length){
+        nnA.forEach(o=>righe.push([iso(g),giornoNome(g),et,"","",d.orePian>0?oreTxt(d.orePian):"",(o.ora?o.ora+" ":"")+o.testo]));
+      } else {
+        righe.push([iso(g),giornoNome(g),et,"","",d.orePian>0?oreTxt(d.orePian):"",""]);
+      }
+      continue;
+    }
+    if(!d.ore) continue;
+    const nnL=d.noteLista||[];
+    if(nnL.length){
+      nnL.forEach(o=>righe.push([iso(g),giornoNome(g),d.turno?TURNI[d.turno].nome:"Lavoro",oreTxt(d.ore),oreTxt(d.stra),"",(o.ora?o.ora+" ":"")+o.testo]));
+    } else {
+      righe.push([iso(g),giornoNome(g),d.turno?TURNI[d.turno].nome:"Lavoro",oreTxt(d.ore),oreTxt(d.stra),"",""]);
+    }
+    to+=d.ore; ts+=d.stra;
+  }
+  righe.push(["","","","","","",""]);
+  righe.push(["","","","","",""]);
+  righe.push(["TOTALE","","",oreTxt(to),oreTxt(ts),oreTxt(tf+tp),""]);
+  righe.push(["Ferie","",gf+" gg","","",oreTxt(tf),""]);
+  righe.push(["Permessi","",gp+" gg","","",oreTxt(tp),""]);
+  const csv="\ufeff"+righe.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(";")).join("\r\n");
+  const b=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);
+  a.download="orari-"+meseNome(new Date(ripAnno,ripMese,1))+"-"+ripAnno+".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  mostra("CSV esportato · condividilo con il tuo datore di lavoro");
+});
+
+/* ============ NAVIGAZIONE ============ */
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>vai(b.dataset.tab)));
+function vai(t){
+  view=t;
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
+  document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+(t==="oggi"?"oggi":t)));
+  const tt={oggi:"Oggi",cal:"Calendario",rip:"Riepilogo",set:"Impostazioni"}[t];
+  document.getElementById("hTtl").textContent=tt;
+  const a=new Date();
+  document.getElementById("hSub").textContent = t==="oggi"
+    ? giornoNome(a)+" "+a.getDate()+" "+meseNome(a)+" "+a.getFullYear()
+    : (t==="set" ? "Il mio contratto e le mie regole"
+    : meseNome(new Date(t==="cal"?calAnno:ripAnno, t==="cal"?calMese:ripMese,1))+" "+(t==="cal"?calAnno:ripAnno));
+  if(t==="cal") renderCal(); if(t==="rip") renderRip(); if(t==="set") renderSet(); if(t==="oggi") renderOggi();
+  window.scrollTo(0,0);
+}
+document.getElementById("pPrev").addEventListener("click",()=>{calMese--;if(calMese<0){calMese=11;calAnno--;}renderCal();});
+document.getElementById("pNext").addEventListener("click",()=>{calMese++;if(calMese>11){calMese=0;calAnno++;}renderCal();});
+document.getElementById("rPrev").addEventListener("click",()=>{ripMese--;if(ripMese<0){ripMese=11;ripAnno--;}renderRip();});
+document.getElementById("rNext").addEventListener("click",()=>{ripMese++;if(ripMese>11){ripMese=0;ripAnno++;}renderRip();});
+
+/* ============ AVVIO ============ */
+function aggiornaTutto(){ renderOggi(); renderCal(); renderRip(); }
+aggiornaTutto();
+setInterval(()=>{ if(view==="oggi"&&STATO&&STATO.g) renderOggi(); },20000);
+window.addEventListener("focus",aggiornaTutto);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) aggiornaTutto(); });
+</script>
+</body>
+</html>
