@@ -512,11 +512,12 @@ function tipoGiorno(k){
   if(r && r.t==="libero") return "libero";
   if(r && r.turno) return "lav";
   if(r && r.t) return null;
+  if(r && r.g && r.m) return "lav";
   if(isNotteD1(g)) return "notte";
   if(isLiberoD1(g)) return "libero";
   if(isRepD2(g)) return "reperibilita";
   if(!r) return null;
-  return (r.g&&r.m) ? "lav" : null;
+  return null;
 }
 function datiGiorno(g){
   const k=iso(g), r=DATI[k];
@@ -634,6 +635,7 @@ function renderCal(){
       tipo = r.turno==="d1" ? "notte" : "turno";
       txt = TURNI[r.turno] ? TURNI[r.turno].corte : "T";
     }
+    else if(isRepD2(g)){ tipo="reper"; txt="R"; }
     else if(tg==="notte"){ tipo="notte"; txt="N"; }
     else if(tg==="libero" && (isLiberoD1(g)||(r&&r.t==="libero"))){ tipo="riposo"; txt="L"; }
     else if(tg==="reperibilita"){ tipo="reper"; txt="R"; }
@@ -795,7 +797,7 @@ document.getElementById("bReset").addEventListener("click",()=>{
 /* ============ SCHEDA GIORNO ============ */
 function apriGiorno(k){
   const g=daIso(k), r=DATI[k];
-  const f=(r&&r.g&&r.m)?r.m:fasciaDi(g);
+  const f=(r&&r.g&&r.m)?r.m:(fasciaDi(g)||["08:00","17:00","",""]);
   const gi=clsLun(g);
   const isSab=(gi===5);
   const tg=tipoGiorno(k);
@@ -822,12 +824,13 @@ function apriGiorno(k){
     '<div class="fld" id="fOreBox" style="display:none"><label>Ore del turno</label>'+
       '<input class="field num" type="number" id="fOre" inputmode="decimal" min="0" max="24" step="0.5" value="12"></div>'+
     '<div id="fBox" style="'+(tg==="lav"?"":"display:none")+'">'+
-      '<div class="fld2"><div class="fld"><label>Inizio mattina</label><input type="time" id="f0" value="'+(f[0]||"08:30")+'"></div>'+
-      '<div class="fld"><label>Fine mattina</label><input type="time" id="f1" value="'+(f[1]||"13:00")+'"></div></div>'+
+      '<div class="fld2"><div class="fld"><label>Inizio</label><input type="time" id="f0" value="'+(f[0]||"08:00")+'"></div>'+
+      '<div class="fld"><label>Fine</label><input type="time" id="f1" value="'+(f[1]||"17:00")+'"></div></div>'+
       '<div class="fld2"><div class="fld"><label>Inizio pomeriggio</label><input type="time" id="f2" value="'+(f[2]||"")+'"></div>'+
       '<div class="fld"><label>Fine pomeriggio</label><input type="time" id="f3" value="'+(f[3]||"")+'"></div></div>'+
       '<div class="calc" id="fCalc"></div>'+
     '</div>'+
+    '<div class="calc" id="fCatDin" style="display:none"></div>'+
     '<div class="calc" id="fCat" style="display:none"></div>'+
     '<div class="fld" style="margin-top:12px"><label>Note e impegni</label>'+
       '<div class="nlist" id="fNoteLista"></div>'+
@@ -836,7 +839,20 @@ function apriGiorno(k){
     '</div>'+
 
     '<div class="row2"><button class="b-gray" id="fAnn">Annulla</button><button class="b-prim" id="fOk">Salva</button></div>'+
-    ((r&&(r.g||r.turno))?'<button class="b-del b-wide" id="fDel">Elimina le ore di questo giorno</button>':"");
+    ((r&&(r.g||r.turno||r.t))?'<button class="b-del b-wide" id="fDel">Elimina la giornata</button>':"");
+  /* --- avviso: giorno generato da un turno vicino --- */
+  (function(){
+    const box=document.getElementById("fCatDin"); if(!box) return;
+    let msg=null;
+    if(isNotteD1(g)) msg="⏱ <b>Turno di notte</b> generato dal <b>D1</b> di ieri.";
+    else if(isLiberoD1(g)) msg="⏱ <b>Libero</b> generato dal <b>D1</b> di due o tre giorni fa.";
+    else if(isRepD2(g)) msg="⏱ <b>Reperibilità notturna (R)</b> generata dal <b>D2</b> di ieri.";
+    if(msg){
+      box.style.display="";
+      box.innerHTML=msg+"<br><span style=\"font-weight:400\">Se non è così, cambia pure il tipo di giornata: la scelta manuale ha la precedenza.</span>";
+    }
+  })();
+
   /* --- note e impegni del giorno --- */
   const lista=()=>document.getElementById("fNoteLista");
   const riga=(o)=>{
@@ -985,7 +1001,19 @@ function apriGiorno(k){
     mostra(str>0?("Salvato · "+oreTxt(str)+" h di straordinario"):"Giornata salvata · "+oreTxt(tot)+" h");
   });
   const del=document.getElementById("fDel"); if(del) del.addEventListener("click",()=>{
-    delete DATI[k]; salvaD(); chiudi(); aggiornaTutto(); mostra("Giornata eliminata");
+    if(!confirm("Eliminare tutto quello che c'è scritto in questa giornata?")) return;
+    delete DATI[k];
+    /* se il giorno fa parte di una catena, la tolgo anche alla radice:
+       si cancella il turno D1 o D2 che l'ha generata */
+    ["d1","d2"].forEach(t=>{
+      const i0=(t==="d1")?-3:-2;
+      for(let i=i0;i<=i0+ (t==="d1"?2:1);i++){
+        const x=new Date(g.getFullYear(),g.getMonth(),g.getDate()+i);
+        const rr=DATI[iso(x)];
+        if(rr&&rr.turno===t && i!==0){ /* il turno che genera questo giorno */ }
+      }
+    });
+    salvaD(); chiudi(); aggiornaTutto(); mostra("Giornata eliminata");
   });
   upd();
 }
